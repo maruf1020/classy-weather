@@ -3,15 +3,15 @@ import React from 'react';
 function getWeatherIcon(wmoCode) {
   const icons = new Map([
     [[0], "☀️"],
-    [[1], "🌤️"],
+    [[1], "🌤"],
     [[2], "⛅️"],
     [[3], "☁️"],
-    [[45, 48], "💨"],
-    [[51, 56, 61, 66, 80], "🌦️"],
-    [[53, 55, 63, 65, 57, 67, 81, 82], "🌧️"],
-    [[71, 73, 75, 77, 85, 86], "🌧️"],
-    [[95], "🌩️"],
-    [[96, 99], "⛈️"],
+    [[45, 48], "🌫"],
+    [[51, 56, 61, 66, 80], "🌦"],
+    [[53, 55, 63, 65, 57, 67, 81, 82], "🌧"],
+    [[71, 73, 75, 77, 85, 86], "🌨"],
+    [[95], "🌩"],
+    [[96, 99], "⛈"],
   ]);
   const arr = [...icons.keys()].find((key) => key.includes(wmoCode));
   if (!arr) return "NOT FOUND";
@@ -34,21 +34,15 @@ function formatDay(dateStr) {
 
 class App extends React.Component {
 
-  state = {
-    location: '',
-    loading: false,
-    displayCity: "",
-    weather: {}
-  };
+  constructor(props) {
+    super(props);
+    this.state = { location: 'dhaka', loading: false, displayCity: "", weather: {} };
+    this.fetchWeather = this.fetchWeather.bind(this)
+  }
 
-  fetchWeather = async () => {
+
+  async fetchWeather() {
     const { location } = this.state;
-
-    if (location.length < 2) {
-      this.setState({ weather: {} })
-      this.setState({ displayCity: "" })
-      return;
-    }
     try {
       this.setState({ loading: true });
       // 1) Getting location (geocoding)
@@ -56,6 +50,7 @@ class App extends React.Component {
         `https://geocoding-api.open-meteo.com/v1/search?name=${location}`
       );
       const geoData = await geoRes.json();
+      console.log(geoData);
 
       if (!geoData.results) throw new Error("Location not found");
 
@@ -70,26 +65,12 @@ class App extends React.Component {
       const weatherData = await weatherRes.json();
       this.setState({ weather: weatherData.daily })
     } catch (err) {
-      console.error(err);
+      console.err(err);
     } finally {
       this.setState({ loading: false });
     }
   }
 
-  //we can imagine this as useEffect with empty array
-  componentDidMount() {
-    // this.fetchWeather();
-    this.setState({ location: localStorage.getItem('location') || '' });
-  }
-
-  //we can imagine this as useEffect with dependency array
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.location !== this.state.location) {
-      this.fetchWeather();
-
-      localStorage.setItem('location', this.state.location);
-    }
-  }
 
   render() {
     const { location, loading, displayCity, weather } = this.state;
@@ -97,8 +78,10 @@ class App extends React.Component {
       <div className='app'>
         <h1>Classy Weather</h1>
         <div>
-          <Input value={location} onChange={(e) => this.setState({ location: e.target.value })} placeholder={'Enter a city name'} />
+          <input type='text' placeholder='Enter a city name' value={location}
+            onChange={e => this.setState({ location: e.target.value })} />
         </div>
+        <button onClick={this.fetchWeather}>Get Weather</button>
 
         {loading && <p className="loading">Loading...</p>}
         {!loading && weather.weathercode && <Weather weather={weather} displayCity={displayCity} />}
@@ -108,27 +91,8 @@ class App extends React.Component {
 }
 export default App;
 
-class Input extends React.Component {
-  render() {
-    const { value, onChange, placeholder } = this.props;
-    return (
-      <input
-        placeholder={placeholder}
-        type='text'
-        value={value}
-        onChange={onChange}
-      />
-    )
-  }
-}
-
 
 class Weather extends React.Component {
-
-  componentWillUnmount() {
-    console.log('unmount')
-  }
-
   render() {
     const { displayCity, weather: { temperature_2m_max: maxTemp, temperature_2m_min: minTemp, time: dates, weathercode: codes } } = this.props;
 

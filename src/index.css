@@ -15,7 +15,7 @@ body {
   font-size: 2rem;
   height: 100vh;
   color: #222;
-  background-color: #eabfb9;
+  background-color: #5C8374;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -25,11 +25,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 112rem;
+  width: 120rem;
+  max-width: 90vw;
   gap: 4rem;
   padding: 6rem 0;
-  border: 2px solid #222;
-  outline: 2px solid #222;
+  border: 2px solid #183D3D;
+  outline: 2px solid #183D3D;
   outline-offset: 1.2rem;
 }
 
@@ -49,7 +50,7 @@ input {
   font-family: inherit;
   color: inherit;
   font-size: 2rem;
-  background-color: #f0d2ce;
+  background-color: #93B1A6;
   padding: 1.6rem 3.2rem;
   border: none;
   width: 32rem;
@@ -63,10 +64,13 @@ input:focus {
   list-style: none;
   display: flex;
   gap: 2.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0 5rem;
 }
 
 .day {
-  background-color: #f0d2ce;
+  background-color: #93B1A6;
   padding: 1.6rem 0 2rem;
   width: 12.8rem;
 
