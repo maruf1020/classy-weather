@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 function getWeatherIcon(wmoCode) {
   const icons = new Map([
@@ -32,24 +32,26 @@ function formatDay(dateStr) {
   }).format(new Date(dateStr));
 }
 
-export default function App() {
-  const [location, setLocation] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-  const [displayCity, setDisplayCity] = React.useState('');
-  const [weather, setWeather] = React.useState({});
-  const [error, setError] = React.useState(null);
+class App extends React.Component {
 
-  const fetchWeather = async () => {
+  state = {
+    location: '',
+    loading: false,
+    displayCity: "",
+    weather: {}
+  };
+
+  fetchWeather = async () => {
+    const { location } = this.state;
+
     if (location.length < 2) {
-      setWeather({});
-      setDisplayCity('');
+      this.setState({ weather: {} })
+      this.setState({ displayCity: "" })
       return;
     }
-
     try {
-      setLoading(true);
-
-      //geolocation - city name to coordinates and other data
+      this.setState({ loading: true });
+      // 1) Getting location (geocoding)
       const geoRes = await fetch(
         `https://geocoding-api.open-meteo.com/v1/search?name=${location}`
       );
@@ -59,91 +61,108 @@ export default function App() {
 
       const { latitude, longitude, timezone, name, country_code } =
         geoData.results.at(0);
+      this.setState({ displayCity: `${name} ${convertToFlag(country_code)}` });
 
-      setDisplayCity(`${name} ${convertToFlag(country_code)}`);
-
-      // Get weather data by coordinates
+      // 2) Getting actual weather
       const weatherRes = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&timezone=${timezone}&daily=weathercode,temperature_2m_max,temperature_2m_min`
       );
       const weatherData = await weatherRes.json();
-      setWeather(weatherData.daily);
+      this.setState({ weather: weatherData.daily })
     } catch (err) {
-      setError(err);
+      console.error(err);
     } finally {
-      setLoading(false);
+      this.setState({ loading: false });
     }
   }
 
   //we can imagine this as useEffect with empty array
-  useEffect(() => {
+  componentDidMount() {
     // this.fetchWeather();
-    setLocation(localStorage.getItem('location') || '');
-  }, []);
-
-  //we can imagine this as useEffect with dependency array
-  useEffect(() => {
-    if (location) {
-      fetchWeather();
-      localStorage.setItem('location', location);
-    }
-  }, [location]);
-
-  if (error) {
-    console.error(error);
+    this.setState({ location: localStorage.getItem('location') || '' });
   }
 
-  return (
-    <div className='app'>
-      <h1>Classy Weather</h1>
-      <div>
-        <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={'Enter a city name'} />
+  //we can imagine this as useEffect with dependency array
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.location !== this.state.location) {
+      this.fetchWeather();
+
+      localStorage.setItem('location', this.state.location);
+    }
+  }
+
+  render() {
+    const { location, loading, displayCity, weather } = this.state;
+    return (
+      <div className='app'>
+        <h1>Classy Weather</h1>
+        <div>
+          <Input value={location} onChange={(e) => this.setState({ location: e.target.value })} placeholder={'Enter a city name'} />
+        </div>
+
+        {loading && <p className="loading">Loading...</p>}
+        {!loading && weather.weathercode && <Weather weather={weather} displayCity={displayCity} />}
       </div>
-      {loading && <p className="loading">Loading...</p>}
-      {!loading && weather.weathercode && <Weather weather={weather} displayCity={displayCity} />}
-    </div>
-  )
+    )
+  }
+}
+export default App;
+
+class Input extends React.Component {
+  render() {
+    const { value, onChange, placeholder } = this.props;
+    return (
+      <input
+        placeholder={placeholder}
+        type='text'
+        value={value}
+        onChange={onChange}
+      />
+    )
+  }
 }
 
-function Input({ value, onChange, placeholder }) {
-  return (
-    <input
-      placeholder={placeholder}
-      type='text'
-      value={value}
-      onChange={onChange}
-    />
-  )
+
+class Weather extends React.Component {
+
+  componentWillUnmount() {
+    console.log('unmount')
+  }
+
+  render() {
+    const { displayCity, weather: { temperature_2m_max: maxTemp, temperature_2m_min: minTemp, time: dates, weathercode: codes } } = this.props;
+
+    return (
+      <div>
+        <h2>weather {displayCity}</h2>
+        <ul className='weather'>
+          {dates.map((date, i) => (
+            <Day
+              key={date}
+              date={date}
+              maxTemp={maxTemp.at(i)}
+              minTemp={minTemp.at(i)}
+              code={codes.at(i)}
+              isToday={i === 0}
+            />
+          ))}
+        </ul>
+      </div>
+    )
+  }
 }
 
-function Weather({ weather: { temperature_2m_max: maxTemp, temperature_2m_min: minTemp, time: dates, weathercode: codes }, displayCity }) {
-  return (
-    <div>
-      <h2>weather {displayCity}</h2>
-      <ul className='weather'>
-        {dates.map((date, i) => (
-          <Day
-            key={date}
-            date={date}
-            maxTemp={maxTemp.at(i)}
-            minTemp={minTemp.at(i)}
-            code={codes.at(i)}
-            isToday={i === 0}
-          />
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function Day({ date, maxTemp, minTemp, code, isToday }) {
-  return (
-    <li className='day'>
-      <span>{getWeatherIcon(code)}</span>
-      <p>{isToday ? "Today" : formatDay(date)}</p>
-      <p>
-        {Math.floor(minTemp)}&deg; &mdash; <strong>{Math.ceil(maxTemp)}&deg;</strong>
-      </p>
-    </li>
-  )
+class Day extends React.Component {
+  render() {
+    const { date, maxTemp, minTemp, code, isToday } = this.props;
+    return (
+      <li className='day'>
+        <span>{getWeatherIcon(code)}</span>
+        <p>{isToday ? "Today" : formatDay(date)}</p>
+        <p>
+          {Math.floor(minTemp)}&deg; &mdash; <strong>{Math.ceil(maxTemp)}&deg;</strong>
+        </p>
+      </li>
+    )
+  }
 }
